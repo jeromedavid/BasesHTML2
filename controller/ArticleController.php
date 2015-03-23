@@ -13,20 +13,31 @@
  */
 class ArticleController {
 
-    private $repo;
+    /**
+     * Stores the application (Dependency Injection pattern)
+     * 
+     * @var Application 
+     */
+    private $app;
 
-    public function __construct($repo) {
-        $this->repo = $repo;
+    /**
+     * Constructor of the class ArticleController
+     * 
+     * @param Application $app
+     */
+    public function __construct($app) {
+        $this->app = $app;
     }
 
     /**
-     * Index will show every article into a list
+     * Index action will show every article into a list
      * 
      * @return string HTML code of the content of page
      */
     public function indexAction() {
         // on forge la requete SQL
-        $articles = $this->repo->getAll();
+        $repo = $this->getRepository("article");
+        $articles = $repo->getAll();
 
         $view = new View("article.index", array("articles" => $articles));
 
@@ -34,7 +45,7 @@ class ArticleController {
     }
 
     /**
-     * Allow the users to read an article on a given id via GET
+     * Action that allows the users to read an article on a given id via GET
      * 
      * @return string HTML code of the content of page
      */
@@ -44,10 +55,10 @@ class ArticleController {
 
         // on demande l'article au repo, on lève une erreur s'il n'existe pas
         if ($id > 0) {
-            $article = $this->repo->get($id);
+            $article = $this->getRepository("article")->get($id);
 
             if (!$article) {
-                addMessageRedirect(0, "error", "Aucun article trouvé avec cet identifiant.");
+                Application::addMessageRedirect(0, "error", "Aucun article trouvé avec cet identifiant.");
             }
         }
 
@@ -72,25 +83,25 @@ class ArticleController {
             if (isset($_POST['id']) && $_POST['id'] > 0)
                 $id = (int) $_POST['id'];
 
-            $result = $this->repo->remove($id);
+            $result = $this->getRepository("article")->remove($id);
 
             // on valide et on redirige
-            addMessageRedirect(0, "valid", $result . " article a été supprimé.");
+            Application::addMessageRedirect(0, "valid", $result . " article a été supprimé.");
         }
         // on regarde si notre formulaire a été annulé
         else if (isset($_POST['annuler'])) {
             // on ne fait rien et on redirige
-            addMessageRedirect(0, "info", "La suppression a été annulée.");
+            Application::addMessageRedirect(0, "info", "La suppression a été annulée.");
         }
 
         // si on est jusqu'ici, il n'y a pas eu de redirection
         // il faut donc générer un formulaire
         // mais d'abord, regardons si on a un article correspondant à l'identifiant demandé
         if ($id > 0) {
-            $article = $this->repo->get($id);
+            $article = $this->getRepository("article")->get($id);
 
             if (!$article) {
-                addMessageRedirect(0, "error", "Aucun article trouvé avec cet identifiant.");
+                Application::addMessageRedirect(0, "error", "Aucun article trouvé avec cet identifiant.");
             }
         }
 
@@ -120,10 +131,10 @@ class ArticleController {
             $article->title = $_POST['title'];
             $article->content = $_POST['content'];
 
-            $this->repo->persist($article);
+            $this->getRepository("article")->persist($article);
 
             // on valide et on redirige
-            addMessageRedirect(0, "valid", "Votre article a bien été ".
+            Application::addMessageRedirect(0, "valid", "Votre article a bien été ".
                     ($id>0 ? "mis à jour" : "ajouté"));
         }
 
@@ -131,10 +142,10 @@ class ArticleController {
         // il faut donc générer un formulaire
         // mais d'abord, regardons si on a un article correspondant à l'identifiant demandé
         if ($id > 0) {
-            $article = $this->repo->get($id);
+            $article = $this->getRepository("article")->get($id);
 
             if (!$article)
-                addMessageRedirect(0, "error", "Aucun article trouvé avec cet identifiant.");
+                Application::addMessageRedirect(0, "error", "Aucun article trouvé avec cet identifiant.");
         } else {
             // on instancie un nouvel article alors pour avoir quelque chose à afficher
             // dans le formulaire d'édition
@@ -144,6 +155,16 @@ class ArticleController {
         $view = new View("article.edit", array("article" => $article));
 
         return $view->getHtml();
+    }
+    
+    /**
+     * Returns the repository of the required entity
+     * 
+     * @param string $entity
+     * @return Repository (currently ArticleRepository only)
+     */
+    private function getRepository($entity) {
+        return $this->app->getService("repository")->get($entity);
     }
 
 }
